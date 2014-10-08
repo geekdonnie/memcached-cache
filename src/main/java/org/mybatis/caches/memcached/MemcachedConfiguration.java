@@ -87,6 +87,11 @@ final class MemcachedConfiguration {
     private String password;
 
     /**
+     * The refuse time when connection refused
+     */
+    private int refusePeriod;
+
+    /**
      * @return the keyPrefix
      */
     public String getKeyPrefix() {
@@ -229,11 +234,21 @@ final class MemcachedConfiguration {
     public void setPassword(String password) { this.password = password; }
 
     /**
+     * @return the refuse period
+     */
+    public int getRefusePeriod() { return refusePeriod; }
+
+    /**
+     * @param refusePeriod the refuse period to set
+     */
+    public void setRefusePeriod(int refusePeriod) { this.refusePeriod = refusePeriod; }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public int hashCode() {
-        return hash(1, 31, addresses, compressionEnabled, connectionFactory, expiration, keyPrefix, timeUnit, timeout, usingAsyncGet, usingSASL, username, password);
+        return hash(1, 31, addresses, compressionEnabled, connectionFactory, expiration, keyPrefix, timeUnit, timeout, usingAsyncGet, usingSASL, username, password, refusePeriod);
     }
 
     /**
@@ -275,7 +290,8 @@ final class MemcachedConfiguration {
             && eq(usingAsyncGet, other.usingAsyncGet)
             && eq(usingSASL, other.usingSASL)
             && eq(username, other.username)
-            && eq(password, other.password);
+            && eq(password, other.password)
+            && eq(refusePeriod, other.refusePeriod);
     }
 
     /**
@@ -294,8 +310,8 @@ final class MemcachedConfiguration {
      */
     @Override
     public String toString() {
-        return format( "MemcachedConfiguration [addresses=%s, compressionEnabled=%s, connectionFactory=%s, , expiration=%s, keyPrefix=%s, timeUnit=%s, timeout=%s, usingAsyncGet=%s, usingSASL=%s, username=%s, password=%s]",
-                       addresses, compressionEnabled, connectionFactory, expiration, keyPrefix, timeUnit, timeout, usingAsyncGet, usingSASL, username, password );
+        return format( "MemcachedConfiguration [addresses=%s, compressionEnabled=%s, connectionFactory=%s, , expiration=%s, keyPrefix=%s, timeUnit=%s, timeout=%s, usingAsyncGet=%s, usingSASL=%s, username=%s, password=%s, refusePeriod=%s]",
+                       addresses, compressionEnabled, connectionFactory, expiration, keyPrefix, timeUnit, timeout, usingAsyncGet, usingSASL, username, password, refusePeriod );
     }
 
 }

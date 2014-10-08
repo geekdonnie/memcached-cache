@@ -17,6 +17,7 @@ package org.mybatis.caches.memcached;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -44,11 +45,14 @@ final class MemcachedClientWrapper {
 
     private final MemcachedClient client;
 
+    private Date latestRefusedTime;
+
     public MemcachedClientWrapper() {
         configuration = MemcachedConfigurationBuilder.getInstance().parseConfiguration();
         try {
             if (configuration.isUsingSASL()) {
                 AuthDescriptor ad = new AuthDescriptor(new String[]{"PLAIN"}, new PlainCallbackHandler(configuration.getUsername(), configuration.getPassword()));
+
                 client = new MemcachedClient(new ConnectionFactoryBuilder()
                         .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
                         .setAuthDescriptor(ad).build(), configuration.getAddresses());
@@ -155,26 +159,40 @@ final class MemcachedClientWrapper {
     private Object retrieve(final String keyString) {
         Object retrieved = null;
 
-        if (configuration.isUsingAsyncGet()) {
-            Future<Object> future;
-            if (configuration.isCompressionEnabled()) {
-                future = client.asyncGet(keyString, new CompressorTranscoder());
-            } else {
-                future = client.asyncGet(keyString);
-            }
+        Date currentTime = new Date();
+        if (latestRefusedTime == null || currentTime.getTime() - latestRefusedTime.getTime() >= configuration.getRefusePeriod()) {
+            if (configuration.isUsingAsyncGet()) {
+                Future<Object> future;
+                if (configuration.isCompressionEnabled()) {
+                    future = client.asyncGet(keyString, new CompressorTranscoder());
+                } else {
+                    future = client.asyncGet(keyString);
+                }
 
-            try {
-                retrieved = future.get(configuration.getTimeout(), configuration.getTimeUnit());
-            } catch (Exception e) {
-                future.cancel(false);
-                throw new CacheException(e);
+                try {
+                    retrieved = future.get(configuration.getTimeout(), configuration.getTimeUnit());
+                } catch (Exception e) {
+                    future.cancel(false);
+//                  throw new CacheException(e);
+                    // record latest refused time
+                    latestRefusedTime = new Date();
+                    e.printStackTrace();
+                }
+            } else {
+                try {
+                    if (configuration.isCompressionEnabled()) {
+                        retrieved = client.get(keyString, new CompressorTranscoder());
+                    } else {
+                        retrieved = client.get(keyString);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // record latest refused time
+                    latestRefusedTime = new Date();
+                }
             }
         } else {
-            if (configuration.isCompressionEnabled()) {
-                retrieved = client.get(keyString, new CompressorTranscoder());
-            } else {
-                retrieved = client.get(keyString);
-            }
+            log.debug("in refuse period");
         }
 
         return retrieved;
